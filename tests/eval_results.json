@@ -16,7 +16,7 @@
       "https://www.shl.com/products/product-catalog/view/opq-universal-competency-report-2-0/",
       "https://www.shl.com/products/product-catalog/view/opq-leadership-report/"
     ],
-    "elapsed_s": 0.05
+    "elapsed_s": 1.83
   },
   {
     "trace_id": "C2",
@@ -37,14 +37,12 @@
       "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-g/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 0.03
+    "elapsed_s": 0.73
   },
   {
     "trace_id": "C3",
-    "hard_eval_failures": [
-      "turn_cap_exceeded (turn 9)"
-    ],
-    "hard_eval_pass": false,
+    "hard_eval_failures": [],
+    "hard_eval_pass": true,
     "recall_at_10": 1.0,
     "predicted": [
       "https://www.shl.com/products/product-catalog/view/svar-spoken-english-us-new/",
@@ -59,7 +57,7 @@
       "https://www.shl.com/products/product-catalog/view/entry-level-customer-serv-retail-and-contact-center/",
       "https://www.shl.com/products/product-catalog/view/customer-service-phone-simulation/"
     ],
-    "elapsed_s": 0.04
+    "elapsed_s": 1.06
   },
   {
     "trace_id": "C4",
@@ -80,7 +78,7 @@
       "https://www.shl.com/products/product-catalog/view/graduate-scenarios/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 0.06
+    "elapsed_s": 0.82
   },
   {
     "trace_id": "C5",
@@ -103,7 +101,7 @@
       "https://www.shl.com/products/product-catalog/view/opq-mq-sales-report/",
       "https://www.shl.com/products/product-catalog/view/salestransformationreport2-0-individualcontributor/"
     ],
-    "elapsed_s": 0.05
+    "elapsed_s": 0.93
   },
   {
     "trace_id": "C6",
@@ -121,7 +119,7 @@
       "https://www.shl.com/products/product-catalog/view/safety-and-dependability-focus-8-0/",
       "https://www.shl.com/products/product-catalog/view/workplace-health-and-safety-new/"
     ],
-    "elapsed_s": 0.04
+    "elapsed_s": 0.9
   },
   {
     "trace_id": "C7",
@@ -142,7 +140,7 @@
       "https://www.shl.com/products/product-catalog/view/dependability-and-safety-instrument-dsi/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 0.07
+    "elapsed_s": 0.99
   },
   {
     "trace_id": "C8",
@@ -163,14 +161,12 @@
       "https://www.shl.com/products/product-catalog/view/ms-word-new/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 0.03
+    "elapsed_s": 0.81
   },
   {
     "trace_id": "C9",
-    "hard_eval_failures": [
-      "turn_cap_exceeded (turn 9)"
-    ],
-    "hard_eval_pass": false,
+    "hard_eval_failures": [],
+    "hard_eval_pass": true,
     "recall_at_10": 1.0,
     "predicted": [
       "https://www.shl.com/products/product-catalog/view/core-java-advanced-level-new/",
@@ -190,7 +186,7 @@
       "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-g/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 0.1
+    "elapsed_s": 1.26
   },
   {
     "trace_id": "C10",
@@ -210,6 +206,6 @@
       "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-g/",
       "https://www.shl.com/products/product-catalog/view/graduate-scenarios/"
     ],
-    "elapsed_s": 0.04
+    "elapsed_s": 0.91
   }
 ]

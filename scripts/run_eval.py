@@ -93,6 +93,9 @@ def run_trace(client: httpx.Client, base_url: str, trace: dict, valid_urls: set[
 
         messages.append({"role": "assistant", "content": data.get("reply", "")})
 
+        if data.get("end_of_conversation"):
+            break
+
     recall = recall_at_10(last_recommendations, trace["final_shortlist_urls"])
 
     return {
