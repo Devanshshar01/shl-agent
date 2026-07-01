@@ -1,0 +1,8 @@
+fastapi>=0.111
+uvicorn[standard]>=0.30
+pydantic>=2.7
+anthropic>=0.34
+rank_bm25>=0.2.2
+httpx>=0.27
+beautifulsoup4>=4.12
+requests>=2.32

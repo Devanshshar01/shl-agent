@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: shl-assessment-recommender
+    env: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SHL_AGENT_MODEL
+        value: claude-sonnet-4-6
