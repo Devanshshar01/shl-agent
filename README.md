@@ -1,123 +1,197 @@
 # SHL Assessment Recommender
 
-A conversational agent that helps hiring managers find SHL Individual Test
-Solutions through dialogue, built for the SHL AI Intern take-home assignment.
+A stateless FastAPI service that recommends SHL assessments through a
+conversation-like API, built for the SHL AI intern take-home assignment.
 
-## Quick start
+---
+
+## ✅ What it does
+
+- Handles `POST /chat` with a full conversation history in `messages`.
+- Returns schema-safe JSON with `reply`, `recommendations`, and
+  `end_of_conversation`.
+- Recommends 1–10 grounded catalog items once enough context exists.
+- Returns an empty `recommendations` list when clarifying or refusing.
+- Enforces catalog grounding: every returned URL is validated against the
+  loaded catalog.
+- Provides `GET /health` with `{"status": "ok"}`.
+
+---
+
+## 📦 Project layout
+
+```text
+app/
+  main.py                 FastAPI app: GET /health, POST /chat
+  models.py               Pydantic request/response schema
+  services/
+    catalog.py            Catalog loader + BM25-based retrieval
+    agent.py              Conversation orchestration and grounding guard
+    llm_gemini.py         Gemini-compatible provider wrapper
+  data/
+    catalog.seed.json     35-item fallback extracted from the provided traces
+    catalog.json          Full generated catalog dataset (recommended for submit)
+scripts/
+  scrape_catalog.py       Catalog scraper for building app/data/catalog.json
+  extract_seed_catalog.py Rebuilds catalog.seed.json from C*.md trace sources
+  parse_traces.py         Parses trace source files into tests/traces.json
+  run_eval.py             Local replay harness for evaluator-style checks
+  mock_server.py          Dev stubbed LLM server (no API key needed)
+tests/
+  test_catalog.py         Catalog and retrieval unit tests
+  test_agent_grounding.py Hallucination, injection, and output validation tests
+  traces.json             Parsed conversation traces / ground truth
+Dockerfile
+render.yaml              Render deployment config
+```
+
+---
+
+## 🔧 Requirements
+
+- Python 3.12+
+- Install dependencies with:
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env   # then fill in NVIDIA_API_KEY (preferred) or another provider key
-
-# 1. Build the catalog (needs normal internet access -- not a
-#    network-restricted sandbox):
-cd scripts && python3 scrape_catalog.py --out ../app/data/catalog.json && cd ..
-
-# 2. Run the service
-uvicorn app.main:app --reload
 ```
 
-Without step 1, the service falls back to `app/data/catalog.seed.json` --
-a 35-item bootstrap set extracted verbatim from the 10 provided conversation
-traces (see "Data" below). It's real data, just not the full catalog, so
-you can develop against it but should NOT submit on it.
+### Environment keys
 
-Check it's alive:
+- `NVIDIA_API_KEY` (preferred)
+- `GEMINI_API_KEY`
+- `ANTHROPIC_API_KEY`
+
+The service prefers `NVIDIA_API_KEY`, then `GEMINI_API_KEY`, then
+`ANTHROPIC_API_KEY`.
+
+---
+
+## 🚀 Setup and run
 
 ```bash
-curl localhost:8000/health
-curl -X POST localhost:8000/chat -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Hiring a Java developer who works with stakeholders"}]}'
+cp .env.example .env
+# fill in NVIDIA_API_KEY or another provider key in .env
+
+python scripts/scrape_catalog.py --out app/data/catalog.json
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-## Project layout
+If you skip scraping, the service falls back to `app/data/catalog.seed.json`.
+That fallback is fine for development, but the full catalog should be used
+for final submission.
 
-```
-app/
-  main.py                 FastAPI app: GET /health, POST /chat
-  models.py                Pydantic request/response schema
-  services/
-    catalog.py              Catalog loading + BM25 hybrid retrieval
-    agent.py                 Core orchestration: retrieve -> one LLM call -> validate/ground
-    llm_gemini.py             Optional Gemini-backed client (see "Swapping providers")
-  data/
-    catalog.seed.json        35 real items extracted from C1..C10 traces (dev/test fallback)
-    catalog.json              (generated) full scrape -- not committed, build it yourself
-scripts/
-  scrape_catalog.py         Full catalog scraper (run with real internet access)
-  extract_seed_catalog.py   Rebuilds catalog.seed.json from the C*.md traces
-  parse_traces.py            Parses C1..C10 into tests/traces.json ground truth
-  run_eval.py                 Local eval harness: replays traces, checks hard-evals + Recall@10
-  mock_server.py            Runs the real app with a stubbed LLM call (no API key needed) -- dev/CI only
-tests/
-  test_catalog.py            Unit tests: retrieval quality, URL grounding
-  test_agent_grounding.py    Unit tests: hallucination guard, injection detection, JSON parsing
-  traces.json                (generated) parsed ground truth from the provided traces
-Dockerfile
-render.yaml                 One-click Render.com deploy config
+---
+
+## 🧪 API contract
+
+### `GET /health`
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
 ```
 
-## Design choices (see approach doc for the full writeup)
+### `POST /chat`
 
-- **Retrieval: BM25, not embeddings.** The catalog is a few hundred
-  keyword-dense product names/descriptions ("SQL", "Docker", "OPQ32r").
-  BM25 handles this at least as well as embeddings, with zero external
-  calls, zero cost, and deterministic results. Trade-off: would not scale
-  to a much larger catalog with long free-text descriptions.
-- **One LLM call per turn, not an agent loop.** Retrieval happens first
-  (outside the LLM), then a single call gets the candidate pool + full
-  history and returns strict JSON. Faster and easier to reason about than
-  a multi-step ReAct loop, fits comfortably in the 30s/call budget.
-- **Hard grounding, not prompt-only.** Every recommended URL is checked
-  against the loaded catalog after the LLM responds; anything not in the
-  catalog is silently dropped before the response leaves the service. The
-  system prompt also instructs this, but the code doesn't trust it blindly.
-- **Turn budget awareness.** The evaluator caps conversations at 8 messages
-  total (user + assistant). The system prompt pushes the agent to clarify
-  at most once before committing to an initial shortlist, and the service
-  forces a final answer + `end_of_conversation: true` if a call arrives at
-  the cap.
+Request:
 
-## Running the eval harness
+```json
+{
+  "messages": [
+    {"role": "user", "content": "Hiring a Java developer who works with stakeholders"},
+    {"role": "assistant", "content": "Okay, tell me more."},
+    {"role": "user", "content": "Mid-level, around 4 years"}
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "reply": "Got it. Here are grounded SHL assessments that fit your request.",
+  "recommendations": [
+    {"name": "Java 8 (New)", "url": "https://www.shl.com/...", "test_type": "K"},
+    {"name": "OPQ32r", "url": "https://www.shl.com/...", "test_type": "P"}
+  ],
+  "end_of_conversation": false
+}
+```
+
+- `recommendations` is empty during clarification or refusal.
+- populated recommendations are between 1 and 10.
+- `end_of_conversation` is `true` only when the agent is finished.
+
+---
+
+## 📈 Verification
+
+### Smoke tests
+
+I executed 10 random API smoke tests against the local service, covering:
+- Java developer + stakeholder interaction
+- personality assessment for customer service
+- safety/compliance screening
+- short SQL competency test
+- graduate finance trainee
+- OPQ32r vs GSA comparison
+- vague "I need an assessment"
+- Docker + AWS software engineer
+- director leadership assessment
+- inbound sales/customer service hiring
+
+All 10 requests returned a valid schema and grounded catalog URLs.
+
+### Local evaluator replay
+
+Run the provided local harness:
 
 ```bash
-# against a live server (needs ANTHROPIC_API_KEY set)
-uvicorn app.main:app &
-python3 scripts/run_eval.py --base-url http://localhost:8000
+python scripts/run_eval.py --base-url http://127.0.0.1:8000
 ```
 
-This replays each of the 10 provided traces' user turns against `/chat`,
-checks hard-eval conditions (schema compliance, catalog-only URLs, turn cap),
-and computes Recall@10 against each trace's labeled final shortlist. Results
-go to `tests/eval_results.json`.
+This script replays the 10 supplied traces, verifies schema compliance, checks
+that every recommendation URL is from the catalog, enforces the 8-message turn
+cap, and computes Recall@10.
 
-Note: this is a *scripted* replay (it plays back the trace's literal user
-messages), not an LLM-simulated user like SHL's real evaluator. It's a
-useful, fast local sanity check but won't perfectly predict the graded
-score -- a simulated user will paraphrase and ad-lib more than a fixed script.
+---
 
-## Swapping the LLM provider
+## 💡 Design summary
 
-`app/services/agent.py` prefers `NVIDIA_API_KEY` when present, then
-`GEMINI_API_KEY`, and finally `ANTHROPIC_API_KEY`. To force Gemini,
-point the agent at `app/services/llm_gemini.py` directly:
+- **Stateless**: no per-conversation state is stored by the service.
+- **Catalog grounding**: the code validates every recommended URL against the
+  loaded catalog.
+- **Behavior coverage**: clarify vague queries, recommend with enough context,
+  refine on follow-up constraints, compare named items, and refuse off-topic
+  requests.
+- **Turn-budget aware**: the service is designed for the 8-message evaluator
+  cap.
+- **Balanced retrieval**: BM25 over the catalog avoids embedding cost and keeps
+  recommendations deterministic and fast.
 
-```python
-# in Agent.__init__:
-from app.services.llm_gemini import GeminiClient
-self._client = GeminiClient()  # reads GEMINI_API_KEY
-```
+---
 
-The rest of the orchestration code is provider-agnostic; it only touches
-`response.content[i].text`, which the Gemini shim reproduces.
+## ☁️ Deployment
 
-## Deploying
+The repository includes `Dockerfile` and `render.yaml` for deployment.
+Ensure `app/data/catalog.json` is present in the container image by running
+`python scripts/scrape_catalog.py --out app/data/catalog.json` before build.
 
-**Render** (free tier): push this repo, connect it, and Render will pick up
-`render.yaml` and `Dockerfile` automatically. Set `NVIDIA_API_KEY` (preferred)
-or `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` in the dashboard's environment
-variables. Cold starts on the free tier can take up to ~1-2 minutes, which is
-why `/health` in the spec explicitly allows that.
+Set the chosen provider key in the deployment environment.
+
+---
+
+## Notes
+
+- The fallback `catalog.seed.json` is only for local dev and should not be
+  the submitted runtime catalog.
+- `scripts/run_eval.py` is a local playback check, not a perfect mirror of
+  SHL's LLM-simulated evaluator.
+
 
 **Fly / Railway / Modal**: same `Dockerfile` works as-is; set the provider key
 (`NVIDIA_API_KEY`, `GEMINI_API_KEY`, or `ANTHROPIC_API_KEY`) in each

@@ -577,13 +577,13 @@ class Agent:
         if self._looks_like_compare_request(messages):
             return self._handle_compare_request(messages)
 
-        reply = "Here are grounded SHL assessments that fit what you described."
+        reply = "Here are grounded SHL assessments."
         if any(re.search(pattern, low) for pattern in AFFIRMATION_PATTERNS):
             reply = "Great — here is the finalized grounded shortlist."
         elif any(term in low for term in ["add", "drop", "remove", "include", "replace"]):
-            reply = "I’ve updated the grounded shortlist to reflect your latest constraints."
+            reply = "I’ve updated the grounded shortlist."
         elif force_close:
-            reply = "Here is the best grounded shortlist within the remaining turn budget."
+            reply = "Here is the best grounded shortlist."
 
         return ChatResponse(
             reply=reply,
@@ -681,7 +681,15 @@ class Agent:
                 return json.loads(m.group(0))
             raise
 
+    def _looks_like_refine_request(self, messages: list[Message]) -> bool:
+        last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+        low = last_user.lower()
+        return any(term in low for term in ["actually", "add", "drop", "remove", "replace", "shorter", "longer", "keep", "exclude"])
+
     def _is_vague_request(self, messages: list[Message]) -> bool:
+        if len(messages) > 1 and self._looks_like_refine_request(messages):
+            return False
+
         last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
         text = last_user.lower()
         vague_markers = [

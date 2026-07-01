@@ -10,6 +10,33 @@ def test_load():
     assert len(c.items) > 0
 
 
+def test_from_raw_accepts_pdf_style_fields():
+    raw = {
+        "products": [
+            {
+                "entity_id": "A-100",
+                "title": "Java Coding Test",
+                "link": "https://example.test/products/java-coding",
+                "test_type": "K",
+                "test_type_labels": ["Knowledge & Skills"],
+                "duration": 12,
+                "job_levels": "Mid-Professional",
+                "languages": "English",
+                "description": "Coding assessment for Java",
+            }
+        ]
+    }
+    c = Catalog._from_raw(raw)
+    assert len(c.items) == 1
+    item = c.items[0]
+    assert item.id == "A-100"
+    assert item.name == "Java Coding Test"
+    assert item.url == "https://example.test/products/java-coding"
+    assert item.test_type == ["K"]
+    assert item.duration_minutes == 12
+    assert "java" in item.search_doc.lower()
+
+
 def test_search_relevance_excel():
     c = Catalog.load()
     results = c.search("Excel Word admin assistant", top_k=5)

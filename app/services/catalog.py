@@ -118,32 +118,119 @@ class Catalog:
             "or scripts/extract_seed_catalog.py first."
         )
 
+    @staticmethod
+    def _normalize_records(raw: object) -> list[dict]:
+        if isinstance(raw, list):
+            return [r for r in raw if isinstance(r, dict)]
+        if isinstance(raw, dict):
+            for key in ("products", "items", "catalog", "data", "results"):
+                value = raw.get(key)
+                if isinstance(value, list):
+                    return [r for r in value if isinstance(r, dict)]
+            if any(key in raw for key in ("entity_id", "title", "link", "name", "url")):
+                return [raw]
+        return []
+
+    @staticmethod
+    def _coerce_test_type(raw: dict) -> list[str]:
+        raw_value = raw.get("test_type")
+        if isinstance(raw_value, str):
+            raw_value = [raw_value]
+        elif raw_value is None:
+            raw_value = []
+        elif not isinstance(raw_value, list):
+            raw_value = [str(raw_value)]
+
+        if raw_value:
+            normalized: list[str] = []
+            for value in raw_value:
+                if isinstance(value, str):
+                    value = value.strip()
+                    if not value:
+                        continue
+                    code = value.upper()
+                    if len(code) == 1 and code in TEST_TYPE_LEGEND:
+                        normalized.append(code)
+                    else:
+                        normalized.append(TEST_TYPE_LEGEND.get(value, value))
+            if normalized:
+                return normalized
+
+        labels = raw.get("test_type_labels") or raw.get("testTypeLabels") or []
+        if isinstance(labels, str):
+            labels = [labels]
+        elif not isinstance(labels, list):
+            labels = [str(labels)]
+
+        normalized_labels = []
+        for label in labels:
+            if not isinstance(label, str):
+                continue
+            label = label.strip()
+            if not label:
+                continue
+            normalized_labels.append(label)
+
+        if normalized_labels:
+            reverse_legend = {v: k for k, v in TEST_TYPE_LEGEND.items()}
+            inferred = []
+            for label in normalized_labels:
+                code = reverse_legend.get(label)
+                if code:
+                    inferred.append(code)
+                elif len(label) == 1 and label.upper() in TEST_TYPE_LEGEND:
+                    inferred.append(label.upper())
+                else:
+                    inferred.append(label)
+            return inferred
+
+        return []
+
+    @staticmethod
+    def _coerce_duration(raw: dict) -> int | None:
+        for key in ("duration_minutes", "duration", "estimated_duration_minutes"):
+            value = raw.get(key)
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float):
+                return int(value)
+            if isinstance(value, str):
+                digits = re.search(r"(\d+)", value)
+                if digits:
+                    return int(digits.group(1))
+        return None
+
     @classmethod
-    def _from_raw(cls, raw: list[dict]) -> "Catalog":
+    def _from_raw(cls, raw: object) -> "Catalog":
         items = []
-        for r in raw:
+        for r in cls._normalize_records(raw):
+            name = r.get("name") or r.get("title") or r.get("product_name") or r.get("product") or ""
+            url = r.get("url") or r.get("link") or r.get("href") or r.get("product_url") or ""
+            if not name or not url:
+                continue
+
             search_doc = " ".join(
                 filter(
                     None,
                     [
-                        r.get("name", ""),
-                        r.get("description", ""),
-                        r.get("job_levels", ""),
-                        " ".join(r.get("test_type_labels", []) or []),
-                        r.get("id", "").replace("-", " "),
+                        name,
+                        r.get("description", "") or r.get("summary", "") or r.get("details", ""),
+                        r.get("job_levels", "") or r.get("jobLevels", "") or r.get("levels", ""),
+                        " ".join(r.get("test_type_labels", []) or r.get("testTypeLabels", []) or []),
+                        str(r.get("id") or r.get("entity_id") or r.get("entityId") or r.get("product_id") or "").replace("-", " "),
                     ],
                 )
             )
             items.append(
                 CatalogItem(
-                    id=r.get("id", ""),
-                    name=r["name"],
-                    url=r["url"],
-                    test_type=r.get("test_type", []) or [],
-                    duration_minutes=r.get("duration_minutes"),
-                    languages=r.get("languages", ""),
-                    job_levels=r.get("job_levels", ""),
-                    description=r.get("description", ""),
+                    id=str(r.get("id") or r.get("entity_id") or r.get("entityId") or r.get("product_id") or ""),
+                    name=name,
+                    url=url,
+                    test_type=cls._coerce_test_type(r),
+                    duration_minutes=cls._coerce_duration(r),
+                    languages=r.get("languages", "") or r.get("language", ""),
+                    job_levels=r.get("job_levels", "") or r.get("jobLevels", "") or r.get("levels", ""),
+                    description=r.get("description", "") or r.get("summary", "") or r.get("details", ""),
                     search_doc=search_doc,
                 )
             )

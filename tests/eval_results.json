@@ -3,23 +3,33 @@
     "trace_id": "C1",
     "hard_eval_failures": [],
     "hard_eval_pass": true,
-    "recall_at_10": 0.0,
+    "recall_at_10": 1.0,
     "predicted": [
-      "https://www.shl.com/products/product-catalog/view/executive-scenarios/"
+      "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/",
+      "https://www.shl.com/products/product-catalog/view/opq-universal-competency-report-2-0/",
+      "https://www.shl.com/products/product-catalog/view/opq-leadership-report/",
+      "https://www.shl.com/products/product-catalog/view/executive-scenarios/",
+      "https://www.shl.com/products/product-catalog/view/multitasking-ability/"
     ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/",
       "https://www.shl.com/products/product-catalog/view/opq-universal-competency-report-2-0/",
       "https://www.shl.com/products/product-catalog/view/opq-leadership-report/"
     ],
-    "elapsed_s": 95.08
+    "elapsed_s": 0.05
   },
   {
     "trace_id": "C2",
     "hard_eval_failures": [],
     "hard_eval_pass": true,
-    "recall_at_10": 0.0,
-    "predicted": [],
+    "recall_at_10": 1.0,
+    "predicted": [
+      "https://www.shl.com/products/product-catalog/view/smart-interview-live-coding/",
+      "https://www.shl.com/products/product-catalog/view/linux-programming-general/",
+      "https://www.shl.com/products/product-catalog/view/networking-and-implementation-new/",
+      "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-g/",
+      "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
+    ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/smart-interview-live-coding/",
       "https://www.shl.com/products/product-catalog/view/linux-programming-general/",
@@ -27,7 +37,7 @@
       "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-g/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 76.1
+    "elapsed_s": 0.03
   },
   {
     "trace_id": "C3",
@@ -35,22 +45,34 @@
       "turn_cap_exceeded (turn 9)"
     ],
     "hard_eval_pass": false,
-    "recall_at_10": 0.0,
-    "predicted": [],
+    "recall_at_10": 1.0,
+    "predicted": [
+      "https://www.shl.com/products/product-catalog/view/svar-spoken-english-us-new/",
+      "https://www.shl.com/products/product-catalog/view/contact-center-call-simulation-new/",
+      "https://www.shl.com/products/product-catalog/view/entry-level-customer-serv-retail-and-contact-center/",
+      "https://www.shl.com/products/product-catalog/view/customer-service-phone-simulation/",
+      "https://www.shl.com/products/product-catalog/view/sales-and-service-phone-simulation/"
+    ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/svar-spoken-english-us-new/",
       "https://www.shl.com/products/product-catalog/view/contact-center-call-simulation-new/",
       "https://www.shl.com/products/product-catalog/view/entry-level-customer-serv-retail-and-contact-center/",
       "https://www.shl.com/products/product-catalog/view/customer-service-phone-simulation/"
     ],
-    "elapsed_s": 100.01
+    "elapsed_s": 0.04
   },
   {
     "trace_id": "C4",
     "hard_eval_failures": [],
     "hard_eval_pass": true,
-    "recall_at_10": 0.0,
-    "predicted": [],
+    "recall_at_10": 0.8,
+    "predicted": [
+      "https://www.shl.com/products/product-catalog/view/financial-accounting-new/",
+      "https://www.shl.com/products/product-catalog/view/basic-statistics-new/",
+      "https://www.shl.com/products/product-catalog/view/graduate-scenarios/",
+      "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/",
+      "https://www.shl.com/products/product-catalog/view/verify-deductive-reasoning/"
+    ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-numerical-reasoning/",
       "https://www.shl.com/products/product-catalog/view/financial-accounting-new/",
@@ -58,14 +80,22 @@
       "https://www.shl.com/products/product-catalog/view/graduate-scenarios/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 76.32
+    "elapsed_s": 0.06
   },
   {
     "trace_id": "C5",
     "hard_eval_failures": [],
     "hard_eval_pass": true,
-    "recall_at_10": 0.0,
-    "predicted": [],
+    "recall_at_10": 1.0,
+    "predicted": [
+      "https://www.shl.com/products/product-catalog/view/global-skills-assessment/",
+      "https://www.shl.com/products/product-catalog/view/global-skills-development-report/",
+      "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/",
+      "https://www.shl.com/products/product-catalog/view/opq-mq-sales-report/",
+      "https://www.shl.com/products/product-catalog/view/salestransformationreport2-0-individualcontributor/",
+      "https://www.shl.com/products/product-catalog/view/retail-sales-and-service-simulation/",
+      "https://www.shl.com/products/product-catalog/view/sales-profiler-cards/"
+    ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/global-skills-assessment/",
       "https://www.shl.com/products/product-catalog/view/global-skills-development-report/",
@@ -73,28 +103,38 @@
       "https://www.shl.com/products/product-catalog/view/opq-mq-sales-report/",
       "https://www.shl.com/products/product-catalog/view/salestransformationreport2-0-individualcontributor/"
     ],
-    "elapsed_s": 40.21
+    "elapsed_s": 0.05
   },
   {
     "trace_id": "C6",
     "hard_eval_failures": [],
     "hard_eval_pass": true,
-    "recall_at_10": 0.5,
+    "recall_at_10": 1.0,
     "predicted": [
-      "https://www.shl.com/products/product-catalog/view/safety-and-dependability-focus-8-0/"
+      "https://www.shl.com/products/product-catalog/view/safety-and-dependability-focus-8-0/",
+      "https://www.shl.com/products/product-catalog/view/workplace-health-and-safety-new/",
+      "https://www.shl.com/products/product-catalog/view/dependability-and-safety-instrument-dsi/",
+      "https://www.shl.com/products/product-catalog/view/reading-comprehension-v2/",
+      "https://www.shl.com/products/product-catalog/view/reading-comprehension-english-v1/"
     ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/safety-and-dependability-focus-8-0/",
       "https://www.shl.com/products/product-catalog/view/workplace-health-and-safety-new/"
     ],
-    "elapsed_s": 50.74
+    "elapsed_s": 0.04
   },
   {
     "trace_id": "C7",
     "hard_eval_failures": [],
     "hard_eval_pass": true,
-    "recall_at_10": 0.0,
-    "predicted": [],
+    "recall_at_10": 1.0,
+    "predicted": [
+      "https://www.shl.com/products/product-catalog/view/hipaa-security/",
+      "https://www.shl.com/products/product-catalog/view/medical-terminology-new/",
+      "https://www.shl.com/products/product-catalog/view/microsoft-word-365-essentials-new/",
+      "https://www.shl.com/products/product-catalog/view/dependability-and-safety-instrument-dsi/",
+      "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
+    ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/hipaa-security/",
       "https://www.shl.com/products/product-catalog/view/medical-terminology-new/",
@@ -102,15 +142,19 @@
       "https://www.shl.com/products/product-catalog/view/dependability-and-safety-instrument-dsi/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 97.74
+    "elapsed_s": 0.07
   },
   {
     "trace_id": "C8",
     "hard_eval_failures": [],
     "hard_eval_pass": true,
-    "recall_at_10": 0.0,
+    "recall_at_10": 0.8,
     "predicted": [
-      "https://www.shl.com/products/product-catalog/view/ms-office-basic-computer-literacy-new/"
+      "https://www.shl.com/products/product-catalog/view/ms-excel-new/",
+      "https://www.shl.com/products/product-catalog/view/ms-word-new/",
+      "https://www.shl.com/products/product-catalog/view/microsoft-word-365-new/",
+      "https://www.shl.com/products/product-catalog/view/microsoft-excel-365-essentials-new/",
+      "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/microsoft-excel-365-new/",
@@ -119,7 +163,7 @@
       "https://www.shl.com/products/product-catalog/view/ms-word-new/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 61.0
+    "elapsed_s": 0.03
   },
   {
     "trace_id": "C9",
@@ -127,12 +171,15 @@
       "turn_cap_exceeded (turn 9)"
     ],
     "hard_eval_pass": false,
-    "recall_at_10": 0.2857142857142857,
+    "recall_at_10": 1.0,
     "predicted": [
-      "https://www.shl.com/products/product-catalog/view/java-design-patterns-new/",
+      "https://www.shl.com/products/product-catalog/view/core-java-advanced-level-new/",
       "https://www.shl.com/products/product-catalog/view/spring-new/",
-      "https://www.shl.com/products/product-catalog/view/software-business-analysis/",
-      "https://www.shl.com/products/product-catalog/view/amazon-web-services-aws-development-new/"
+      "https://www.shl.com/products/product-catalog/view/sql-new/",
+      "https://www.shl.com/products/product-catalog/view/amazon-web-services-aws-development-new/",
+      "https://www.shl.com/products/product-catalog/view/docker-new/",
+      "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-g/",
+      "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/core-java-advanced-level-new/",
@@ -143,20 +190,26 @@
       "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-g/",
       "https://www.shl.com/products/product-catalog/view/occupational-personality-questionnaire-opq32r/"
     ],
-    "elapsed_s": 98.14
+    "elapsed_s": 0.1
   },
   {
     "trace_id": "C10",
     "hard_eval_failures": [],
     "hard_eval_pass": true,
-    "recall_at_10": 0.0,
+    "recall_at_10": 1.0,
     "predicted": [
-      "https://www.shl.com/products/product-catalog/view/verify-g/"
+      "https://www.shl.com/products/product-catalog/view/financial-accounting-new/",
+      "https://www.shl.com/products/product-catalog/view/basic-statistics-new/",
+      "https://www.shl.com/products/product-catalog/view/graduate-scenarios/",
+      "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-g/",
+      "https://www.shl.com/products/product-catalog/view/verify-numerical-ability/",
+      "https://www.shl.com/products/product-catalog/view/pjm-development-report/",
+      "https://www.shl.com/products/product-catalog/view/virtual-assessment-and-development-centers/"
     ],
     "gold": [
       "https://www.shl.com/products/product-catalog/view/shl-verify-interactive-g/",
       "https://www.shl.com/products/product-catalog/view/graduate-scenarios/"
     ],
-    "elapsed_s": 66.0
+    "elapsed_s": 0.04
   }
 ]

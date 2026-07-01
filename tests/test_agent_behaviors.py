@@ -34,3 +34,16 @@ def test_compare_request_uses_catalog_data():
     assert "Occupational Personality Questionnaire OPQ32r" in result.reply
     assert "Global Skills Assessment" in result.reply
     assert result.end_of_conversation is False
+
+
+def test_refine_request_updates_shortlist_with_prior_conversation():
+    agent = make_offline_agent()
+    history = [
+        Message(role="user", content="I am hiring a Java developer"),
+        Message(role="assistant", content="Here are grounded SHL assessments."),
+        Message(role="user", content="Actually add personality tests"),
+    ]
+    result = agent.handle(history)
+    assert "updated the grounded shortlist" in result.reply.lower()
+    assert len(result.recommendations) > 0
+    assert result.end_of_conversation is False
