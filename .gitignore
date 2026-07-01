@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+node_modules/
+docgen/*.pdf
+docgen/*.jpg
+app/data/catalog.json
+scripts/.page_cache/
+tests/eval_results.json
+.DS_Store
