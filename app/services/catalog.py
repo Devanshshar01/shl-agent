@@ -108,7 +108,7 @@ class Catalog:
 
         for p in candidates:
             if p.exists():
-                raw = json.loads(p.read_text())
+                raw = json.loads(p.read_text(encoding="utf-8"))
                 if not raw:
                     continue
                 return cls._from_raw(raw)

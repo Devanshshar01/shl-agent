@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.services.catalog import Catalog
@@ -52,6 +51,19 @@ def test_test_type_filter():
     c = Catalog.load()
     results = c.search("assessment", top_k=50, test_types=["P"])
     assert all("P" in r.test_type for r in results)
+
+
+def test_full_catalog_is_loaded_not_seed_only():
+    c = Catalog.load()
+    assert len(c.items) >= 300
+
+
+def test_catalog_urls_are_product_detail_pages():
+    c = Catalog.load()
+    assert all(
+        item.url.startswith("https://www.shl.com/products/product-catalog/view/")
+        for item in c.items
+    )
 
 
 if __name__ == "__main__":

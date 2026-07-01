@@ -32,7 +32,7 @@ def load_valid_urls() -> set[str]:
     for name in ("catalog.json", "catalog.seed.json"):
         p = CATALOG_PATH / name
         if p.exists():
-            raw = json.loads(p.read_text())
+            raw = json.loads(p.read_text(encoding="utf-8"))
             return {item["url"] for item in raw}
     return set()
 
@@ -110,7 +110,7 @@ def main():
     ap.add_argument("--base-url", default="http://localhost:8000")
     args = ap.parse_args()
 
-    traces = json.loads(TRACES_PATH.read_text())
+    traces = json.loads(TRACES_PATH.read_text(encoding="utf-8"))
     valid_urls = load_valid_urls()
 
     # health check first

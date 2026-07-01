@@ -7,9 +7,9 @@ Solutions through dialogue, built for the SHL AI Intern take-home assignment.
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env   # then fill in ANTHROPIC_API_KEY
+cp .env.example .env   # then fill in NVIDIA_API_KEY (preferred) or another provider key
 
-# 1. Build the real catalog (needs normal internet access -- not a
+# 1. Build the catalog (needs normal internet access -- not a
 #    network-restricted sandbox):
 cd scripts && python3 scrape_catalog.py --out ../app/data/catalog.json && cd ..
 
@@ -98,8 +98,9 @@ score -- a simulated user will paraphrase and ad-lib more than a fixed script.
 
 ## Swapping the LLM provider
 
-`app/services/agent.py` uses the Anthropic SDK by default. To run on
-Gemini's free tier instead (see `app/services/llm_gemini.py`):
+`app/services/agent.py` prefers `NVIDIA_API_KEY` when present, then
+`GEMINI_API_KEY`, and finally `ANTHROPIC_API_KEY`. To force Gemini,
+point the agent at `app/services/llm_gemini.py` directly:
 
 ```python
 # in Agent.__init__:
@@ -113,12 +114,14 @@ The rest of the orchestration code is provider-agnostic; it only touches
 ## Deploying
 
 **Render** (free tier): push this repo, connect it, and Render will pick up
-`render.yaml` and `Dockerfile` automatically. Set `ANTHROPIC_API_KEY` in the
-dashboard's environment variables. Cold starts on the free tier can take up
-to ~1-2 minutes, which is why `/health` in the spec explicitly allows that.
+`render.yaml` and `Dockerfile` automatically. Set `NVIDIA_API_KEY` (preferred)
+or `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` in the dashboard's environment
+variables. Cold starts on the free tier can take up to ~1-2 minutes, which is
+why `/health` in the spec explicitly allows that.
 
-**Fly / Railway / Modal**: same `Dockerfile` works as-is; set the
-`ANTHROPIC_API_KEY` env var in each platform's secrets UI.
+**Fly / Railway / Modal**: same `Dockerfile` works as-is; set the provider key
+(`NVIDIA_API_KEY`, `GEMINI_API_KEY`, or `ANTHROPIC_API_KEY`) in each
+platform's secrets UI.
 
 Before submitting, make sure `app/data/catalog.json` (the full scrape) is
 present in the image -- the Dockerfile copies everything under `app/`, so

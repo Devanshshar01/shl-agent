@@ -32,14 +32,6 @@ def _ensure_agent() -> Agent:
     return _agent
 
 
-@app.get("/debug/provider")
-def debug_provider() -> dict[str, str]:
-    agent = _ensure_agent()
-    client = agent._client
-    provider = type(client).__name__ if client is not None else "offline"
-    return {"provider": provider}
-
-
 @app.on_event("startup")
 def _startup() -> None:
     global _catalog, _agent

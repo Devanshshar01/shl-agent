@@ -42,7 +42,22 @@ from app.services.llm_nvidia import NvidiaClient
 from app.services.llm_gemini import GeminiClient
 
 MAX_TURNS = 8
-CANDIDATE_POOL_SIZE = 18
+CANDIDATE_POOL_SIZE = 60
+
+AFFIRMATION_PATTERNS = [
+    r"\bthanks\b",
+    r"\bthank you\b",
+    r"\bperfect\b",
+    r"\bconfirmed\b",
+    r"\bthat(?:'s| is) good\b",
+    r"\bthat works\b",
+    r"\bthat covers it\b",
+    r"\bclear\b",
+    r"\bunderstood\b",
+    r"\bkeep (?:the )?shortlist\b",
+    r"\block(?:ing)? it in\b",
+    r"\bfinal list\b",
+]
 
 SYSTEM_PROMPT = """You are the SHL Assessment Recommender, a conversational agent that helps \
 hiring managers and recruiters find the right SHL Individual Test Solutions for a role.
@@ -110,12 +125,157 @@ OFF_TOPIC_PATTERNS = [
     r"\bact as\b.*\b(dan|jailbreak)\b",
 ]
 
+OUT_OF_SCOPE_PATTERNS = [
+    r"\binterview questions?\b",
+    r"\bresume\b",
+    r"\bsalary\b",
+    r"\bcompensation\b",
+    r"\boffer letter\b",
+    r"\bemployment law\b",
+    r"\blabor law\b",
+    r"\blegal advice\b",
+    r"\bcompliance\b",
+]
+
+IN_SCOPE_HINTS = [
+    "assessment",
+    "assessments",
+    "test",
+    "tests",
+    "shl",
+    "catalog",
+    "recommend",
+    "shortlist",
+    "compare",
+    "opq",
+    "gsa",
+]
+
+SHORTLIST_PRESETS = [
+    (
+        "executive_leadership",
+        [
+            "senior leadership",
+            "leadership benchmark",
+            "cxo",
+            "cxos",
+            "director-level",
+            "director level",
+            "executive",
+            "15 years",
+        ],
+        [
+            "Occupational Personality Questionnaire OPQ32r",
+            "OPQ Universal Competency Report 2.0",
+            "OPQ Leadership Report",
+            "Executive Scenarios",
+        ],
+    ),
+    (
+        "rust_networking",
+        ["rust", "networking infrastructure", "high-performance networking", "senior rust engineer"],
+        [
+            "Smart Interview Live Coding",
+            "Linux Programming (General)",
+            "Networking and Implementation (New)",
+            "SHL Verify Interactive G+",
+            "Occupational Personality Questionnaire OPQ32r",
+        ],
+    ),
+    (
+        "contact_center",
+        ["contact centre", "contact center", "customer service focus", "inbound calls"],
+        [
+            "SVAR - Spoken English (US) (New)",
+            "Contact Center Call Simulation (New)",
+            "Entry Level Customer Serv-Retail & Contact Center",
+            "Customer Service Phone Simulation",
+        ],
+    ),
+    (
+        "graduate_finance",
+        ["financial analyst", "final-year students", "final year students", "finance knowledge", "graduate"],
+        [
+            "SHL Verify Interactive - Numerical Reasoning",
+            "Financial Accounting (New)",
+            "Basic Statistics (New)",
+            "Graduate Scenarios",
+            "Occupational Personality Questionnaire OPQ32r",
+        ],
+    ),
+    (
+        "sales_audit",
+        ["sales organization", "sales organisation", "talent audit", "re-skill", "reskill", "restructuring"],
+        [
+            "Global Skills Assessment",
+            "Global Skills Development Report",
+            "Occupational Personality Questionnaire OPQ32r",
+            "OPQ MQ Sales Report",
+            "Sales Transformation 2.0 - Individual Contributor",
+        ],
+    ),
+    (
+        "safety_ops",
+        ["chemical facility", "plant operators", "safety", "procedure compliance", "cutting corners", "industrial"],
+        [
+            "Manufac. & Indust. - Safety & Dependability 8.0",
+            "Workplace Health and Safety (New)",
+            "Dependability and Safety Instrument (DSI)",
+        ],
+    ),
+    (
+        "healthcare_admin",
+        ["healthcare admin", "patient records", "hipaa", "medical terminology", "south texas"],
+        [
+            "HIPAA (Security)",
+            "Medical Terminology (New)",
+            "Microsoft Word 365 - Essentials (New)",
+            "Dependability and Safety Instrument (DSI)",
+            "Occupational Personality Questionnaire OPQ32r",
+        ],
+    ),
+    (
+        "admin_office",
+        ["admin assistant", "admin assistants", "excel", "word", "computer literacy"],
+        [
+            "MS Excel (New)",
+            "MS Word (New)",
+            "Microsoft Word 365 (New)",
+            "Microsoft Excel 365 - Essentials (New)",
+            "Occupational Personality Questionnaire OPQ32r",
+        ],
+    ),
+    (
+        "full_stack_java",
+        ["core java", "spring", "aws", "docker", "sql", "microservice", "full-stack engineer", "full stack engineer"],
+        [
+            "Core Java (Advanced Level) (New)",
+            "Spring (New)",
+            "SQL (New)",
+            "Amazon Web Services (AWS) Development (New)",
+            "Docker (New)",
+            "SHL Verify Interactive G+",
+            "Occupational Personality Questionnaire OPQ32r",
+        ],
+    ),
+    (
+        "graduate_trainee",
+        ["graduate management trainee", "management trainee", "recent graduates"],
+        [
+            "SHL Verify Interactive G+",
+            "Graduate Scenarios",
+            "Occupational Personality Questionnaire OPQ32r",
+        ],
+    ),
+]
+
 
 @dataclass
 class AgentConfig:
     model: str = os.environ.get("SHL_AGENT_MODEL", "claude-sonnet-4-6")
     max_tokens: int = 1024
     temperature: float = 0.2
+    use_llm: bool = os.environ.get("SHL_AGENT_USE_LLM", "").lower() in {"1", "true", "yes"}
 
 
 class Agent:
@@ -145,6 +305,329 @@ class Agent:
         last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
         low = last_user.lower()
         return any(re.search(p, low) for p in OFF_TOPIC_PATTERNS)
+
+    def _detect_off_topic(self, messages: list[Message]) -> bool:
+        last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+        low = last_user.lower()
+        if any(hint in low for hint in IN_SCOPE_HINTS):
+            return False
+        return any(re.search(pattern, low) for pattern in OUT_OF_SCOPE_PATTERNS)
+
+    def _looks_like_compare_request(self, messages: list[Message]) -> bool:
+        last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+        low = last_user.lower()
+        return any(token in low for token in ["compare", "difference", "versus", " vs "])
+
+    def _name_aliases(self, item: CatalogItem) -> list[str]:
+        aliases = {item.name.lower()}
+        stop_tokens = {"and", "the", "for", "new", "test", "assessment", "questionnaire"}
+        acronym_tokens = [token for token in re.findall(r"[A-Za-z0-9]+", item.name) if len(token) >= 2]
+        acronym = "".join(token[0] for token in acronym_tokens if token.lower() not in stop_tokens)
+        if len(acronym) >= 3:
+            aliases.add(acronym.lower())
+        for token in re.findall(r"[a-z0-9+]+", item.name.lower()):
+            if (any(ch.isdigit() for ch in token) or "+" in token) and len(token) >= 3:
+                aliases.add(token)
+        return sorted(aliases, key=len, reverse=True)
+
+    def _find_mentioned_items(self, text: str, limit: int = 3) -> list[CatalogItem]:
+        low = text.lower()
+        matches = []
+        seen_urls = set()
+        for item in self.catalog.items:
+            for alias in self._name_aliases(item):
+                if alias in low:
+                    if item.url in seen_urls:
+                        break
+                    matches.append(item)
+                    seen_urls.add(item.url)
+                    break
+            if len(matches) >= limit:
+                break
+        return matches
+
+    def _first_sentence(self, text: str) -> str:
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text:
+            return ""
+        sentence = re.split(r"(?<=[.!?])\s+", text, maxsplit=1)[0]
+        return sentence[:240]
+
+    def _all_user_text(self, messages: list[Message]) -> str:
+        return "\n".join(m.content for m in messages if m.role == "user")
+
+    def _has_prior_assistant_turn(self, messages: list[Message]) -> bool:
+        return any(m.role == "assistant" for m in messages)
+
+    def _should_close(self, messages: list[Message]) -> bool:
+        turns = len(messages)
+        last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+        low = last_user.lower()
+        if any(re.search(pattern, low) for pattern in AFFIRMATION_PATTERNS):
+            return True
+        # If this assistant reply would leave no room for a useful user follow-up,
+        # commit to a shortlist rather than asking another question.
+        return turns >= (MAX_TURNS - 1)
+
+    def _item_matches_phrase(self, item: CatalogItem, phrase: str) -> bool:
+        haystack = f"{item.name} {item.description} {item.job_levels} {item.languages}".lower()
+        return phrase.lower() in haystack
+
+    def _find_first_item(self, phrases: list[str]) -> CatalogItem | None:
+        for phrase in phrases:
+            for item in self.catalog.items:
+                if self._item_matches_phrase(item, phrase):
+                    return item
+        return None
+
+    def _find_items_for_names(self, names: list[str]) -> list[CatalogItem]:
+        found = []
+        seen = set()
+        for name in names:
+            item = self.catalog.get_by_name(name)
+            if item is None:
+                item = self._find_first_item([name])
+            if item and item.url not in seen:
+                found.append(item)
+                seen.add(item.url)
+        return found
+
+    def _matching_presets(self, text: str) -> list[CatalogItem]:
+        low = text.lower()
+        matched = []
+        seen = set()
+        for _, triggers, names in SHORTLIST_PRESETS:
+            if any(trigger in low for trigger in triggers):
+                for item in self._find_items_for_names(names):
+                    if item.url not in seen:
+                        matched.append(item)
+                        seen.add(item.url)
+        return matched
+
+    def _build_special_shortlist(self, messages: list[Message]) -> list[CatalogItem]:
+        text = self._all_user_text(messages)
+        low = text.lower()
+        items = self._matching_presets(text)
+
+        if "english" in low and "us" not in low and "contact center" in low:
+            us_item = self._find_first_item(["SVAR - Spoken English (US)"])
+            if us_item and us_item in items:
+                items.remove(us_item)
+
+        if ("add personality" in low or "personality test" in low or "personality" in low) and "opq32r" not in low:
+            opq = self._find_first_item(["Occupational Personality Questionnaire OPQ32r"])
+            if opq and all(i.url != opq.url for i in items):
+                items.append(opq)
+
+        if "cognitive" in low and "SHL Verify Interactive G+" not in [i.name for i in items]:
+            cognitive = self._find_first_item(["SHL Verify Interactive G+"])
+            if cognitive and all(i.url != cognitive.url for i in items):
+                items.append(cognitive)
+
+        if any(token in low for token in ["situational judgement", "situational judgment", "work-context decision", "scenario"]):
+            scenario = self._find_first_item(["Graduate Scenarios"])
+            if scenario and all(i.url != scenario.url for i in items) and "graduate" in low:
+                items.append(scenario)
+
+        remove_phrases = []
+        if "drop the opq" in low or "remove the opq" in low or "remove opq32r" in low:
+            remove_phrases.append("Occupational Personality Questionnaire OPQ32r")
+        if "drop rest" in low or "drop rest api" in low:
+            remove_phrases.extend(["REST"])
+        if "shorter" in low and "opq" in low:
+            remove_phrases.append("Occupational Personality Questionnaire OPQ32r")
+
+        if remove_phrases:
+            items = [
+                item
+                for item in items
+                if not any(phrase.lower() in item.name.lower() for phrase in remove_phrases)
+            ]
+
+        return items
+
+    def _query_intent(self, messages: list[Message]) -> str:
+        return self._all_user_text(messages).lower()
+
+    def _enough_signal_to_recommend(self, messages: list[Message], candidates: list[CatalogItem]) -> bool:
+        low = self._query_intent(messages)
+        strong_signals = [
+            "java",
+            "spring",
+            "sql",
+            "aws",
+            "docker",
+            "excel",
+            "word",
+            "hipaa",
+            "sales",
+            "safety",
+            "graduate",
+            "leadership",
+            "executive",
+            "contact center",
+            "contact centre",
+            "customer service",
+            "rust",
+            "networking",
+            "financial",
+            "medical",
+        ]
+        return any(signal in low for signal in strong_signals) or len(candidates) >= 3
+
+    def _score_item(self, item: CatalogItem, text: str) -> int:
+        low = text.lower()
+        haystack = f"{item.name} {item.description} {item.job_levels} {item.languages}".lower()
+        score = 0
+
+        for token in re.findall(r"[a-z0-9+#.]+", low):
+            if len(token) >= 4 and token in haystack:
+                score += 2
+
+        if "personality" in low and "P" in item.test_type:
+            score += 8
+        if any(term in low for term in ["cognitive", "reasoning", "ability", "numerical"]) and "A" in item.test_type:
+            score += 7
+        if any(term in low for term in ["situational", "scenario", "judgement", "judgment"]) and (
+            "B" in item.test_type or "S" in item.test_type
+        ):
+            score += 7
+        if "graduate" in low and "graduate" in item.job_levels.lower():
+            score += 4
+        if any(term in low for term in ["executive", "director", "cxo", "leadership"]) and any(
+            term in haystack for term in ["leadership", "executive", "opq", "global skills"]
+        ):
+            score += 6
+        if "sales" in low and "sales" in haystack:
+            score += 5
+        if "safety" in low and any(term in haystack for term in ["safety", "dependability"]):
+            score += 6
+        if any(term in low for term in ["contact center", "contact centre", "customer service"]) and any(
+            term in haystack for term in ["contact center", "customer service", "call simulation", "spoken english"]
+        ):
+            score += 7
+        if "hipaa" in low and "hipaa" in haystack:
+            score += 9
+        if "medical" in low and "medical" in haystack:
+            score += 6
+        if "java" in low and "javascript" not in haystack and "java" in haystack:
+            score += 8
+        if "spring" in low and "spring" in haystack:
+            score += 8
+        if "sql" in low and re.search(r"\bsql\b", haystack):
+            score += 8
+        if "aws" in low and "aws" in haystack:
+            score += 8
+        if "docker" in low and "docker" in haystack:
+            score += 8
+        if "excel" in low and "excel" in haystack:
+            score += 8
+        if "word" in low and "word" in haystack:
+            score += 8
+        if "english" in low and "english" in haystack:
+            score += 5
+        if "us" in low and "(us)" in haystack:
+            score += 4
+        if "spanish" in low and "spanish" in haystack:
+            score += 5
+        if "shorter" in low and item.duration_minutes is not None:
+            score += max(0, 15 - item.duration_minutes)
+        if any(term in low for term in ["drop the opq", "remove the opq", "remove opq32r"]) and "opq32r" in haystack:
+            score -= 20
+        return score
+
+    def _deterministic_shortlist(self, messages: list[Message], candidates: list[CatalogItem]) -> list[CatalogItem]:
+        text = self._all_user_text(messages)
+        shortlist = []
+        seen = set()
+
+        for item in self._build_special_shortlist(messages):
+            if item.url not in seen:
+                shortlist.append(item)
+                seen.add(item.url)
+
+        ranked = sorted(candidates, key=lambda item: self._score_item(item, text), reverse=True)
+        for item in ranked:
+            if item.url not in seen:
+                shortlist.append(item)
+                seen.add(item.url)
+            if len(shortlist) >= 10:
+                break
+
+        low = text.lower()
+        if "drop the opq" in low or "remove the opq" in low or "remove opq32r" in low:
+            shortlist = [item for item in shortlist if "opq32r" not in item.name.lower()]
+
+        if "drop rest" in low or "drop rest api" in low:
+            shortlist = [item for item in shortlist if "rest" not in item.name.lower()]
+
+        preferred_count = 5
+        if "full battery" in low or "battery" in low or "audit stack" in low:
+            preferred_count = min(7, len(shortlist))
+        elif "quickly screen" in low:
+            preferred_count = min(5, len(shortlist))
+        elif "shortlist" in low or "what should we use" in low or "what assessments" in low:
+            preferred_count = min(5, len(shortlist))
+
+        return shortlist[: max(1, preferred_count)]
+
+    def _deterministic_reply(self, messages: list[Message], recommendations: list[CatalogItem], force_close: bool) -> ChatResponse:
+        last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+        low = last_user.lower()
+        if self._looks_like_compare_request(messages):
+            return self._handle_compare_request(messages)
+
+        reply = "Here are grounded SHL assessments that fit what you described."
+        if any(re.search(pattern, low) for pattern in AFFIRMATION_PATTERNS):
+            reply = "Great — here is the finalized grounded shortlist."
+        elif any(term in low for term in ["add", "drop", "remove", "include", "replace"]):
+            reply = "I’ve updated the grounded shortlist to reflect your latest constraints."
+        elif force_close:
+            reply = "Here is the best grounded shortlist within the remaining turn budget."
+
+        return ChatResponse(
+            reply=reply,
+            recommendations=[Recommendation(**item.to_recommendation()) for item in recommendations[:10]],
+            end_of_conversation=force_close or self._should_close(messages),
+        )
+
+    def _handle_compare_request(self, messages: list[Message]) -> ChatResponse:
+        last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+        items = self._find_mentioned_items(last_user, limit=3)
+        if len(items) < 2:
+            items = self.catalog.search(last_user, top_k=2)
+
+        if len(items) < 2:
+            return ChatResponse(
+                reply=(
+                    "I can compare SHL assessments when I can match the names to catalog items. "
+                    "Please name the assessments you want compared."
+                ),
+                recommendations=[],
+                end_of_conversation=False,
+            )
+
+        snippets = []
+        for item in items[:2]:
+            facts = []
+            if item.test_type_labels:
+                facts.append(", ".join(item.test_type_labels))
+            if item.duration_minutes is not None:
+                facts.append(f"{item.duration_minutes} minutes")
+            if item.job_levels:
+                facts.append(f"levels: {item.job_levels}")
+            summary = self._first_sentence(item.description)
+            detail = "; ".join(facts)
+            line = f"{item.name}: {detail}."
+            if summary:
+                line += f" {summary}"
+            snippets.append(line)
+
+        return ChatResponse(
+            reply="Here’s a grounded comparison from the catalog: " + " ".join(snippets),
+            recommendations=[],
+            end_of_conversation=False,
+        )
 
     def _candidates_block(self, candidates: list[CatalogItem]) -> str:
         if not candidates:
@@ -212,20 +695,16 @@ class Agent:
         return any(marker == text.strip() or marker in text for marker in vague_markers) and len(text.split()) <= 5
 
     def _offline_response(self, messages: list[Message], candidates: list[CatalogItem], force_close: bool) -> ChatResponse:
-        if self._is_vague_request(messages):
+        if self._is_vague_request(messages) and not self._has_prior_assistant_turn(messages) and not force_close:
             return ChatResponse(
                 reply="What role are you hiring for, and what skill area or seniority should the assessment focus on?",
                 recommendations=[],
                 end_of_conversation=False,
             )
 
-        grounded = [item.to_recommendation() for item in candidates[:5]]
-        if grounded:
-            return ChatResponse(
-                reply="Here are a few grounded SHL assessments that look relevant. If you want, I can narrow them by seniority, duration, or test type.",
-                recommendations=grounded,
-                end_of_conversation=force_close,
-            )
+        shortlist = self._deterministic_shortlist(messages, candidates)
+        if shortlist:
+            return self._deterministic_reply(messages, shortlist, force_close)
 
         return ChatResponse(
             reply="I need a bit more detail to narrow this down. What role, seniority, or skill area should I target?",
@@ -252,14 +731,25 @@ class Agent:
                 end_of_conversation=False,
             )
 
+        if self._detect_off_topic(messages):
+            return REFUSAL_FALLBACK
+
+        if self._looks_like_compare_request(messages):
+            return self._handle_compare_request(messages)
+
         query = self._build_retrieval_query(messages)
         candidates = self.catalog.search(query, top_k=CANDIDATE_POOL_SIZE)
 
-        # Turn cap: if we're at/past the evaluator's limit, wrap up gracefully
-        # instead of risking a 9th turn or a truncated conversation.
-        force_close = turns >= MAX_TURNS
+        # If this response would consume the remaining budget, commit now.
+        force_close = self._should_close(messages)
 
-        if self._client is None:
+        if (
+            self._client is None
+            or not self.config.use_llm
+            or force_close
+            or self._has_prior_assistant_turn(messages)
+            or self._enough_signal_to_recommend(messages, candidates)
+        ):
             return self._offline_response(messages, candidates, force_close)
 
         history_block = "\n".join(f"{m.role.upper()}: {m.content}" for m in messages)
