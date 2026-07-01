@@ -8,3 +8,4 @@ app/data/catalog.json
 scripts/.page_cache/
 tests/eval_results.json
 .DS_Store
+.pytest_cache

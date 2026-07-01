@@ -109,6 +109,8 @@ class Catalog:
         for p in candidates:
             if p.exists():
                 raw = json.loads(p.read_text())
+                if not raw:
+                    continue
                 return cls._from_raw(raw)
 
         raise FileNotFoundError(

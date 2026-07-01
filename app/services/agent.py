@@ -38,6 +38,8 @@ import anthropic
 
 from app.models import ChatResponse, Message, Recommendation
 from app.services.catalog import Catalog, CatalogItem
+from app.services.llm_nvidia import NvidiaClient
+from app.services.llm_gemini import GeminiClient
 
 MAX_TURNS = 8
 CANDIDATE_POOL_SIZE = 18
@@ -120,7 +122,17 @@ class Agent:
     def __init__(self, catalog: Catalog, config: AgentConfig | None = None):
         self.catalog = catalog
         self.config = config or AgentConfig()
-        self._client = anthropic.Anthropic()  # picks up ANTHROPIC_API_KEY from env
+        nvidia_key = os.environ.get("NVIDIA_API_KEY")
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+        if nvidia_key:
+            self._client = NvidiaClient(nvidia_key)
+        elif gemini_key:
+            self._client = GeminiClient(gemini_key)
+        elif anthropic_key:
+            self._client = anthropic.Anthropic(api_key=anthropic_key)
+        else:
+            self._client = None
 
     def _build_retrieval_query(self, messages: list[Message]) -> str:
         # Weight the most recent user turn higher by repeating it, but keep
@@ -186,6 +198,41 @@ class Agent:
                 return json.loads(m.group(0))
             raise
 
+    def _is_vague_request(self, messages: list[Message]) -> bool:
+        last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+        text = last_user.lower()
+        vague_markers = [
+            "i need an assessment",
+            "need an assessment",
+            "assessment",
+            "test",
+            "evaluate",
+            "hire",
+        ]
+        return any(marker == text.strip() or marker in text for marker in vague_markers) and len(text.split()) <= 5
+
+    def _offline_response(self, messages: list[Message], candidates: list[CatalogItem], force_close: bool) -> ChatResponse:
+        if self._is_vague_request(messages):
+            return ChatResponse(
+                reply="What role are you hiring for, and what skill area or seniority should the assessment focus on?",
+                recommendations=[],
+                end_of_conversation=False,
+            )
+
+        grounded = [item.to_recommendation() for item in candidates[:5]]
+        if grounded:
+            return ChatResponse(
+                reply="Here are a few grounded SHL assessments that look relevant. If you want, I can narrow them by seniority, duration, or test type.",
+                recommendations=grounded,
+                end_of_conversation=force_close,
+            )
+
+        return ChatResponse(
+            reply="I need a bit more detail to narrow this down. What role, seniority, or skill area should I target?",
+            recommendations=[],
+            end_of_conversation=False,
+        )
+
     def handle(self, messages: list[Message]) -> ChatResponse:
         turns = len(messages)
         if turns == 0:
@@ -211,6 +258,9 @@ class Agent:
         # Turn cap: if we're at/past the evaluator's limit, wrap up gracefully
         # instead of risking a 9th turn or a truncated conversation.
         force_close = turns >= MAX_TURNS
+
+        if self._client is None:
+            return self._offline_response(messages, candidates, force_close)
 
         history_block = "\n".join(f"{m.role.upper()}: {m.content}" for m in messages)
         user_prompt = (

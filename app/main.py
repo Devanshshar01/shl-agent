@@ -3,6 +3,10 @@ from __future__ import annotations
 import logging
 import time
 
+from dotenv import load_dotenv
+
+load_dotenv()  # must run before Agent() reads any API key env vars
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -17,6 +21,23 @@ app = FastAPI(title="SHL Assessment Recommender", version="0.1.0")
 
 _catalog: Catalog | None = None
 _agent: Agent | None = None
+
+
+def _ensure_agent() -> Agent:
+    global _catalog, _agent
+    if _catalog is None:
+        _catalog = Catalog.load()
+    if _agent is None:
+        _agent = Agent(_catalog)
+    return _agent
+
+
+@app.get("/debug/provider")
+def debug_provider() -> dict[str, str]:
+    agent = _ensure_agent()
+    client = agent._client
+    provider = type(client).__name__ if client is not None else "offline"
+    return {"provider": provider}
 
 
 @app.on_event("startup")
@@ -36,7 +57,7 @@ def health() -> HealthResponse:
 def chat(req: ChatRequest, request: Request) -> ChatResponse:
     start = time.monotonic()
     try:
-        result = _agent.handle(req.messages)
+        result = _ensure_agent().handle(req.messages)
     except Exception:
         logger.exception("agent.handle failed")
         result = ChatResponse(
